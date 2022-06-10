@@ -20,18 +20,17 @@ def sort_on_vpc(k):
 
 class RadioStations:
     def __init__(self):
-        self.stations = []
         self.index = 0
         self.blacklist = [
                 "icecast",
                 ]
         self.media_verbs = ['play', 'listen', 'radio']
         self.search_limit = 1000
-        self.last_search_terms = ''
         self.generic_search_terms = [
                 'jazz',
                 'rock',
                 'classical',
+                'easy listening',
                 'ska',
                 'fusion',
                 'punk',
@@ -41,6 +40,8 @@ class RadioStations:
                 'country'
                 ]
         self.channel_index = 0
+        self.last_search_terms = self.generic_search_terms[self.channel_index]
+        self.stations = self.get_stations(self.last_search_terms)
 
 
     def find_mime_type(self, url: str) -> str:
@@ -185,6 +186,9 @@ class RadioStations:
 
     def get_current_station(self):
         if len(self.stations) > 0:
+            if self.index > len(self.stations):
+                # this covers up a bug
+                self.index = 0
             return self.stations[self.index]
         return None
 
@@ -211,7 +215,8 @@ class RadioStations:
         else:
             self.channel_index += 1
         self.index = 0
-        return self.get_stations( self.generic_search_terms[self.channel_index] )
+        self.get_stations( self.generic_search_terms[self.channel_index] )
+        return self.generic_search_terms[self.channel_index]
 
 
     def get_previous_channel(self):
@@ -220,5 +225,6 @@ class RadioStations:
         else:
             self.channel_index -= 1
         self.index = 0
-        return self.get_stations( self.generic_search_terms[self.channel_index] )
+        self.get_stations( self.generic_search_terms[self.channel_index] )
+        return self.generic_search_terms[self.channel_index]
 

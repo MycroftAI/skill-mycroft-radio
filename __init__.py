@@ -37,7 +37,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         super().__init__(name="RfmSkill")
         self.rs = RadioStations()
         self.now_playing = None
-        self.current_station = {}
+        self.current_station = None
         self.station_name = 'RFM'
         self.img_pth = ''
         self.stream_uri = ''
@@ -265,37 +265,43 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 self.handle_play_request()
 
 
-    # @intent_handler(AdaptIntent("").one_of("Play", "Listen"))
+    def play_current(self):
+        exit_flag = False
+        ctr = 0
+        while not exit_flag and ctr < self.rs.get_station_count():
+            new_current_station = self.rs.get_next_station()
+            self.current_station = new_current_station
+            self.stream_uri = self.current_station.get('url_resolved','')
+            self.station_name = self.current_station.get('name', '')
+            self.station_name = self.station_name.replace("\n"," ")
+
+            try:
+                self.handle_play_request()
+                exit_flag = True
+            except:
+                self.log.error("Caught Exception")
+
+            ctr += 1
+
+        if not exit_flag:
+            self.log.error("of %s stations, none work!" % (self.rs.get_station_count(),))
+
+
     @intent_handler("PlayRadio.intent")
     def handle_play_intent(self, message):
         with self.activity():
             self.log.error("PLAY")
             if message.data:
                 self.setup_for_play( message.data.get('utterance', '') )
-                exit_flag = False
-                ctr = 0
-                while not exit_flag and ctr < self.rs.get_station_count():
-                    new_current_station = self.rs.get_next_station()
-                    self.current_station = new_current_station
-                    self.stream_uri = self.current_station.get('url_resolved','')
-                    self.station_name = self.current_station.get('name', '')
-                    self.station_name = self.station_name.replace("\n"," ")
+                self.play_current()
 
-                    try:
-                        self.handle_play_request()
-                        exit_flag = True
-                    except:
-                        self.log.error("Caught Exception")
-
-                    ctr += 1
-
-                if not exit_flag:
-                    self.log.error("of %s stations, none work!" % (self.rs.get_station_count(),))
 
 
     @intent_handler("TurnOnRadio.intent")
     def handle_turnon_intent(self, message):
-        self.handle_play_intent(message)
+        if self.current_station is None:
+            self.setup_for_play( self.rs.get_next_channel() )
+        self.play_current()
 
 
     @intent_handler("StopRadio.intent")

@@ -16,10 +16,11 @@ basically play music, or play radio will select a random genre.
 
 play jazz or play soft rock will play that genre.
 
-next channel or station (previous too) work as does pause.
+next station or previous station will change the station in the current channel.
 
-limited artist support, so for example play pink floyd or
-play dean martin will work, but play the turtles or play
-louie louie will not.
+next channel or previous channel will change the current channel.
 
+there is limited artist support, so for example play pink floyd or play 
+dean martin will work, but play the turtles or play louie louie typically
+do not. 
 
