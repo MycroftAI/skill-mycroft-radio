@@ -166,10 +166,11 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_radio_help(self, _):
         with self.activity():
             self.speak("Mycroft radio allows you to stream music and other content from a variety of free sources.")
-            self.speak("If you ask me to play a specific type of music, like play jazz or play rock, I work very well.")
-            self.speak("Play artist works well for some artists but radio stations are not really artist specific.")
-            self.speak("Next station and next channel or previous station and previous channel will select a different channel.")
-            self.speak("You can also say change radio to change the radio you eye.")
+            self.speak("If you ask me to play a specific type of music, like play Jazz, or play rock, I work very well.")
+            self.speak("Play artist works Oh Kay for some artists but radio stations are not really artist specific.")
+            self.speak("Next station and next channel or previous station and previous channel will select a different channel or station.")
+            self.speak("You can also say change radio to change the radio Theme.")
+            self.speak("For the graphical you eye.")
 
 
     @intent_handler("ChangeRadio.intent")
