@@ -3,9 +3,23 @@
 Initial version which needs some clean up. 
 
 Currently the vocab and dialog trees are copied from the npr news skill
+and only the ones necessary to get the skill working have been modified
 so these will need to be cleaned up, but for now the skill should play
 music which was the goal. 
 
 Uses a free user contributed radio station index (see code for endpoint)
 to stream radio channels using standard audio service.
+
+radio help or help radio will speak options.
+
+basically play music, or play radio will select a random genre.
+
+play jazz or play soft rock will play that genre.
+
+next channel or station (previous too) work as does pause.
+
+limited artist support, so for example play pink floyd or
+play dean martin will work, but play the turtles or play
+louie louie will not.
+
 
