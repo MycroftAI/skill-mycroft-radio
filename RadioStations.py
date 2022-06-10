@@ -40,6 +40,7 @@ class RadioStations:
                 'bluegrass',
                 'country'
                 ]
+        self.channel_index = 0
 
 
     def find_mime_type(self, url: str) -> str:
@@ -101,7 +102,8 @@ class RadioStations:
             # if search terms after clean are null it was most
             # probably something like 'play music' or 'play
             # radio' so we will just select a random genre
-            self.last_search_terms = self.generic_search_terms[randrange(len(self.generic_search_terms)-1)]
+            self.channel_index = randrange(len(self.generic_search_terms)-1)
+            self.last_search_terms = self.generic_search_terms[self.channel_index]
 
         stations = self._search(self.last_search_terms, limit)
 
@@ -201,4 +203,22 @@ class RadioStations:
         else:
             self.index -= 1
         return self.get_current_station()
+
+
+    def get_next_channel(self):
+        if self.channel_index == len(self.generic_search_terms) - 1:
+            self.channel_index = 0
+        else:
+            self.channel_index += 1
+        self.index = 0
+        return self.get_stations( self.generic_search_terms[self.channel_index] )
+
+
+    def get_previous_channel(self):
+        if self.channel_index == 0:
+            self.channel_index = len(self.generic_search_terms) - 1
+        else:
+            self.channel_index -= 1
+        self.index = 0
+        return self.get_stations( self.generic_search_terms[self.channel_index] )
 
