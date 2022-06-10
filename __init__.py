@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # TODO 
-#   handle search request not found. if 2 consecutive misses add recomend say rock or jazz
 #   play <station name> should find if provided
 #   add to favorites and play favorite
 import subprocess, requests, time
@@ -178,7 +177,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_next_intent(self, message):
         with self.activity():
             exit_flag = False
-            while not exit_flag:
+            ctr = 0
+            while not exit_flag and ctr < self.rs.get_station_count():
                 new_current_station = self.rs.get_next_station()
                 if new_current_station.get("name", "") == self.current_station.get("name", ""):
                     # same station
@@ -195,12 +195,15 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 except:
                     self.log.error("Caught Exception")
 
+                ctr += 1
+
 
     @intent_handler("RadioPrevious.intent")
     def handle_previous_intent(self, message):
         with self.activity():
             exit_flag = False
-            while not exit_flag:
+            ctr = 0
+            while not exit_flag and ctr < self.rs.get_station_count():
                 new_current_station = self.rs.get_previous_station()
                 if new_current_station.get("name", "") == self.current_station.get("name", ""):
                     # same station
@@ -216,6 +219,8 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                     exit_flag = True
                 except:
                     self.log.error("Caught Exception")
+
+                ctr += 1
 
 
     @intent_handler("ListenToRadio.intent")
@@ -233,7 +238,25 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         with self.activity():
             if message.data:
                 self.setup_for_play( message.data.get('utterance', '') )
-                self.handle_play_request()
+                exit_flag = False
+                ctr = 0
+                while not exit_flag and ctr < self.rs.get_station_count():
+                    new_current_station = self.rs.get_next_station()
+                    self.current_station = new_current_station
+                    self.stream_uri = self.current_station.get('url_resolved','')
+                    self.station_name = self.current_station.get('name', '')
+                    self.station_name = self.station_name.replace("\n"," ")
+
+                    try:
+                        self.handle_play_request()
+                        exit_flag = True
+                    except:
+                        self.log.error("Caught Exception")
+
+                    ctr += 1
+
+                if not exit_flag:
+                    self.log.error("of %s stations, none work!" % (self.rs.get_station_count(),))
 
 
     def CPS_match_query_phrase(self, phrase: str) -> Tuple[str, float, dict]:
@@ -247,10 +270,9 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         self.log.error("CPS Match Request")
         self.setup_for_play( phrase )
 
+        match_level = 0.0
         if res['confidence'] > 0.0:
             match_level = CPSMatchLevel.EXACT
-        else:
-            match_level = 0.0
 
         return self.station_name, match_level, {'name':self.station_name, 'uri':self.stream_uri}
 
@@ -264,20 +286,18 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_play_request(self):
         """play the current station if there is one"""
         if self.current_station is None:
-            self.log.error("handle_play_request(), srch_terms = %s" % (self.rs.last_search_terms,))
+            self.log.error("Can't find any matching stations for = %s" % (self.rs.last_search_terms,))
             self.speak("Can not find any %s stations" % (self.rs.last_search_terms,))
             return
 
         stream_uri = self.current_station.get('url_resolved', '')
         station_name = self.current_station.get('name','').replace('\n','')
-        mime = self.rs.find_mime_type(stream_uri)
 
-        if stream_uri == '':
-            return
+        mime = self.rs.find_mime_type(stream_uri)
 
         self.CPS_play((stream_uri, mime))
 
-        self.now_playing = 'Now Playing Text Goes Here?'
+        self.now_playing = 'Now Playing'
         self.update_radio_theme('Playing')
 
         # cast to str for json serialization
