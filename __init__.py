@@ -30,7 +30,6 @@ CONF_GENERIC_MATCH = 0.6
 """
 MIA - RestartRadio.intent
 """
-
 class RadioFreeMycroftSkill(CommonPlaySkill):
     """simple streaming radio skill"""
     def __init__(self):
@@ -118,7 +117,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
         if self.fg_color == 'white':
             self.img_pth = "/opt/mycroft/skills/skill-rfm.mycroftai/ui/images/radio4.jpg"
 
-        channel_info = "%s/%s" % (self.rs.index, len(self.rs.stations))
+        channel_info = "%s/%s" % (self.rs.index+1, len(self.rs.stations))
         station_name = self.current_station.get('name','').replace("\n","")
         self.gui['media'] = {
                 "image": self.img_pth,
@@ -161,6 +160,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             artist=station_name
         )
 
+
     ## Intents 
     @intent_handler("HelpRadio.intent")
     def handle_radio_help(self, _):
@@ -177,7 +177,7 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     def handle_change_radio(self, _):
         """change ui theme"""
         with self.activity():
-            self.log.error("change_radio request, now playing = %s" % (self.now_playing,))
+            self.log.info("change_radio request, now playing = %s" % (self.now_playing,))
             if self.fg_color == 'white':
                 self.fg_color = 'black'
                 self.bg_color = 'white'
@@ -189,8 +189,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
                 self.gui.release()
                 self.update_radio_theme('Playing')
 
-
-    # @intent_handler(AdaptIntent('').require('Show').require("Radio"))
 
     @intent_handler("ShowRadio.intent")
     def handle_show_radio(self, _):
@@ -260,7 +258,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     @intent_handler("ListenToRadio.intent")
     def handle_padacious_intent(self, message):
         with self.activity():
-            self.log.error("LISTEN")
             if message.data:
                 self.setup_for_play( message.data.get('utterance', '') )
                 self.handle_play_request()
@@ -291,7 +288,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     @intent_handler("PlayRadio.intent")
     def handle_play_intent(self, message):
         with self.activity():
-            self.log.error("PLAY")
             if message.data:
                 self.setup_for_play( message.data.get('utterance', '') )
                 self.play_current()
@@ -308,7 +304,6 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
     @intent_handler("StopRadio.intent")
     def handle_stop_radio(self, _):
         with self.activity():
-            self.log.error("STOP")
             self.stop()
 
 
@@ -326,19 +321,39 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             Tuple(Name of station, confidence, Station information)
         """
         # Translate match confidence levels to CPSMatchLevels
-        self.log.error("CPS Match Request")
+        self.log.debug("CPS Match Request")
         self.setup_for_play( phrase )
 
         match_level = 0.0
+        tags = []
+        confidence = 0.0
+        stream_uri = ''
         if self.current_station:
             match_level = CPSMatchLevel.EXACT
+            tags = self.current_station.get('tags',[])
+            confidence = self.current_station.get('confidence',0.0)
+            stream_uri = self.current_station.get('url_resolved','')
 
-        return self.station_name, match_level, {'name':self.station_name, 'uri':self.stream_uri}
+
+        # skill specific alternations
+        if len(phrase.split(" ")) < 4:
+            # 3 words or less 
+            confidence += 0.1
+
+        if 'radio' in phrase:
+            # the term radio found
+            confidence += 0.1
+
+        skill_data = {'name':self.station_name, 
+                'media_uri':stream_uri, 
+                'confidence':confidence,
+                'tags':tags}
+
+        return self.station_name, match_level, skill_data
 
 
     def CPS_start(self, _, data):
         """Handle request from Common Play System to start playback."""
-        self.log.error("XXXXXX !!!!!!!!!!!!! CPS START data=%s" % (data,))
         self.handle_play_request()
 
 

@@ -17,6 +17,9 @@ from random import randrange
 def sort_on_vpc(k):
     return k['votes_plus_clicks']
 
+def sort_on_confidence(k):
+    return k['confidence']
+
 
 class RadioStations:
     def __init__(self):
@@ -26,6 +29,7 @@ class RadioStations:
                 ]
         self.media_verbs = ['play', 'listen', 'radio']
         self.search_limit = 1000
+
         self.generic_search_terms = [
                 'jazz',
                 'rock',
@@ -42,6 +46,7 @@ class RadioStations:
         self.channel_index = 0
         self.last_search_terms = self.generic_search_terms[self.channel_index]
         self.stations = self.get_stations(self.last_search_terms)
+        self.original_utterance = ''
 
 
     def find_mime_type(self, url: str) -> str:
@@ -86,7 +91,7 @@ class RadioStations:
 
 
     def _search(self, srch_term, limit):
-        uri = "https://nl1.api.radio-browser.info/json/stations/search?hidebroken=true&limit=%s&name=" % (limit,)
+        uri = "https://de1.api.radio-browser.info/json/stations/search?limit=%s&hidebroken=true&order=clickcount&reverse=true&tagList=" % (limit,)
         query = srch_term.replace(" ", "+")
         uri += query
         res = requests.get(uri)
@@ -96,8 +101,34 @@ class RadioStations:
         return []
 
 
+    def confidence(self, phrase, station):
+        #TODO this needs to be shared between radio 
+        # and music (probably all common plays) BUT I don't know if I want it
+        # to be the one in common play. we will see.
+        phrase = phrase.lower()
+        name = station['name']
+        name = name.replace("\n"," ")
+        name = name.lower()
+        tags = station.get('tags',[])
+        if type(tags) is not list:
+            tags = tags.split(",")
+        confidence = 0.0
+        if phrase in name:
+            confidence += 0.1
+        for tag in tags:
+            tag = tag.lower()
+            if phrase in tag:
+                confidence += 0.01
+            if phrase == tag:
+                confidence += 0.1
+
+        confidence = min(confidence,1.0)
+        return confidence
+
+
     def search(self, sentence, limit):
         unique_stations = {}
+        self.original_utterance = sentence
         self.last_search_terms = self.clean_sentence(sentence)
         if self.last_search_terms == '':
             # if search terms after clean are null it was most
@@ -108,17 +139,19 @@ class RadioStations:
 
         stations = self._search(self.last_search_terms, limit)
 
-        # whack dupes, favor .aac streams
+        # whack dupes, favor match confidence
         for station in stations:
             station_name = station.get('name', '')
             station_name = station_name.replace("\n"," ")
             stream_uri = station.get('url_resolved','')
             if stream_uri != '' and not self.blacklisted(stream_uri):
                 if station_name in unique_stations:
-                    if not unique_stations[station_name]['url_resolved'].endswith('.aac'):
+                    if self.confidence(self.original_utterance, station) > unique_stations[station_name]['confidence']:
+                        station['confidence'] = self.confidence(self.original_utterance, station)
                         unique_stations[station_name] = station
                 else:
                     if self.domain_is_unique(stream_uri, stations):
+                        station['confidence'] = self.confidence(self.original_utterance, station)
                         unique_stations[station_name] = station
 
         res = []
@@ -130,7 +163,8 @@ class RadioStations:
 
             res.append( unique_stations[station] )
 
-        res.sort(key=sort_on_vpc, reverse=True)
+        #res.sort(key=sort_on_vpc, reverse=True)
+        res.sort(key=sort_on_confidence, reverse=True)
 
         return res
 
@@ -158,22 +192,6 @@ class RadioStations:
     def get_stations(self, utterance):
         self.stations = self.search(utterance, self.search_limit)
         self.index = 0
-
-        if len(self.stations) == 0 and len(utterance.split(" ")) > 1:
-            # recover from inferior search
-            # print("Multi term failure detected!")
-            unique_stations_dict = {}
-            for term in utterance.split(" "):
-                new_stations = self.search(term, self.search_limit)
-                new_stations_dict = self.convert_array_to_dict(new_stations)
-                unique_stations_dict.update(new_stations_dict)
-            # now convert unique stations dict to a list sorted by
-            # votes_plus_clicks
-            self.stations = []
-            for station in unique_stations_dict:
-                self.stations.append( unique_stations_dict[station] )
-
-            self.stations.sort(key=sort_on_vpc, reverse=True)
 
 
     def get_station_count(self):
