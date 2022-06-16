@@ -344,6 +344,13 @@ class RadioFreeMycroftSkill(CommonPlaySkill):
             # the term radio found
             confidence += 0.1
 
+        # if we have ' by ' in our original phrase
+        # we can be pretty sure we have an artist 
+        # and title so this will save us a lot of 
+        # missed intents
+        if ' by ' in phrase.lower():
+            confidence = 0.01
+
         skill_data = {'name':self.station_name, 
                 'media_uri':stream_uri, 
                 'confidence':confidence,
