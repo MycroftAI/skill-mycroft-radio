@@ -27,7 +27,8 @@ class RadioStations:
         self.blacklist = [
                 "icecast",
                 ]
-        self.media_verbs = ['play', 'listen', 'radio']
+        self.media_verbs = ['play', 'listen', 'turn on', 'start']
+        self.noise_words = ['on', 'to', 'the', 'music', 'station', 'channel', 'radio']
         self.search_limit = 1000
 
         self.generic_search_terms = [
@@ -64,19 +65,19 @@ class RadioStations:
 
 
     def clean_sentence(self, sentence):
+        sentence = sentence.lower()
         sa = sentence.split(" ")
         vrb = sa[0].lower()
         if vrb in self.media_verbs:
             sentence = sentence[len(vrb):]
 
-        sentence = " " + sentence + " "
-        sentence = sentence.replace(" the ","")
-        sentence = sentence.replace(" music ","")
-        sentence = sentence.replace(" station ","")
-        sentence = sentence.replace(" channel ","")
-        sentence = sentence.replace(" radio ","")
-        sentence = sentence.strip()
-        return sentence
+        sa = sentence.split(" ")
+        final_sentence = ''
+        for wrd in sa:
+            if wrd not in self.noise_words:
+                final_sentence += ' ' + wrd
+
+        return final_sentence.strip()
 
 
     def domain_is_unique(self, stream_uri, stations):
@@ -94,6 +95,7 @@ class RadioStations:
         uri = "https://de1.api.radio-browser.info/json/stations/search?limit=%s&hidebroken=true&order=clickcount&reverse=true&tagList=" % (limit,)
         query = srch_term.replace(" ", "+")
         uri += query
+        print("\n\n%s\n\n" % (uri,))
         res = requests.get(uri)
         if res:
             return res.json()
